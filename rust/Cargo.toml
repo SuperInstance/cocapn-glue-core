@@ -1,0 +1,12 @@
+[package]
+name = "glue-core-math"
+version = "0.1.0"
+edition = "2021"
+description = "Rust mathematical core for cocapn-glue-core — ZHC consensus and Laman rigidity"
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "tests"
+path = "src/lib.rs"
