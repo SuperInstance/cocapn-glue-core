@@ -1,23 +1,33 @@
 # cocapn-glue-core
 
-**Cross-tier wire protocol unifying all FLUX ISA packages.**
+**The nervous system. One wire protocol across every tier — Cortex-M0 microcontroller to CUDA GPU.**
 
-The #1 critical path crate for the Cocapn fleet — provides a unified wire protocol, fleet discovery, and PLATO sync mechanism that works across all 4 FLUX ISA tiers:
+The Cocapn fleet spans a wide range of hardware: [Cortex-M0+](https://en.wikipedia.org/wiki/ARM_Cortex-M0) microcontrollers running bare metal, x86_64 servers, aarch64 edge devices, and CUDA GPUs. These tiers don't share an operating system, allocator, or even a common word size. What they share is this crate — a unified binary wire protocol that works on all of them.
 
-| Tier | Target | Notes |
-|------|--------|-------|
-| **Mini** | `thumbv6m-none-eabi` | Cortex-M0+, no heap, `heapless` only |
-| **Std** | `x86_64` / `aarch64` | Full std, process-level |
-| **Edge** | `aarch64` | UUID-based, networked |
-| **Thor** | CUDA GPUs | GPU UUID prefix, heavy compute |
+---
 
-## Features
+## The Tiers
 
-- **`#![no_std]` by default** — works on MCUs with `heapless`
-- **`std`** — enables `Vec`, `Box`, LRU tile cache, env config
-- **`async`** — async transport traits (implies `std`)
-- **`cuda`** — CUDA capability flag
-- **`plato`** — PLATO sync extensions (implies `std`)
+| Tier | Target | Memory | Heap |
+|------|--------|--------|------|
+| **Mini** | `thumbv6m-none-eabi` (Cortex-M0+) | 32 KB flash, 4 KB RAM | None (`heapless` only) |
+| **Std** | `x86_64` / `aarch64` | Any | Full `std` |
+| **Edge** | `aarch64` (Jetson) | Any | `std` + UUID networking |
+| **Thor** | CUDA GPUs | Device memory | GPU UUID prefix |
+
+When a Mini sensor reads a constraint value and needs to relay it to a Thor cluster, the same wire format works at both ends. The Mini encodes with no allocator. The Thor decodes with a GPU memory pool.
+
+---
+
+## Feature Flags
+
+```bash
+cargo add cocapn-glue-core                   # no_std, heapless only
+cargo add cocapn-glue-core --features std    # Vec, Box, LRU cache
+cargo add cocapn-glue-core --features async  # async transport (implies std)
+cargo add cocapn-glue-core --features cuda   # CUDA capability flag
+cargo add cocapn-glue-core --features plato  # PLATO sync (implies std)
+```
 
 ## Wire Protocol
 
@@ -27,86 +37,27 @@ use cocapn_glue_core::wire::*;
 let id = TierId::from_pid_timestamp(42, 1000);
 let msg = WireMessage::Handshake(Handshake {
     sender: id,
-    capabilities: 0b101,
-    protocol_version: 1,
+    capabilities: 0b101, // Mini + Std + Thor
 });
-
-let bytes = serialize_message(&msg).unwrap();
-let back: WireMessage = deserialize_message(&bytes).unwrap();
-assert_eq!(msg, back);
 ```
 
-## Fleet Discovery
+The protocol is length-delimited, not delimited by sentinel. No escaping needed. Every frame is validated before dispatch.
 
-```rust
-use cocapn_glue_core::discovery::*;
+---
 
-let mut caps = Capabilities::none();
-caps.set(Capability::NoStd);
-caps.set(Capability::Cuda);
+## How It Fits
 
-let peer = DiscoveredPeer::new(tier_id, caps, 1);
-assert!(peer.has_capability(Capability::Cuda));
-```
+The Cocapn fleet's nervous system:
 
-## PLATO Sync
+| Layer | Crate | Purpose |
+|-------|-------|---------|
+| **Wire** | [cocapn-glue-core](https://github.com/SuperInstance/cocapn-glue-core) | Binary protocol across all tiers (this) |
+| **Discovery** | [beacon-protocol](https://github.com/SuperInstance/beacon-protocol) | Fleet discovery and registry |
+| **Memory** | [PLATO](https://github.com/SuperInstance/plato-server) | Persistent tile storage |
+| **Messaging** | [bottle-protocol](https://github.com/SuperInstance/bottle-protocol) | Git-native agent communication |
+| **Orchestration** | [cocapn](https://github.com/SuperInstance/cocapn) | Fleet-wide coordination |
 
-Generation-based delta sync with monotonic IDs:
-
-```rust
-use cocapn_glue_core::plato::*;
-
-let payload = PlatoSyncPayload::Delta {
-    room_id: vec![1, 2, 3],
-    from_gen: SyncGeneration(1),
-    to_gen: SyncGeneration(2),
-    patch: vec![0xFF],
-};
-```
-
-## Merkle Provenance
-
-```rust
-use cocapn_glue_core::provenance::*;
-
-let trace = VerificationTrace::new(tier_id, 1, vec![0xAB], 0, 1000);
-let tree = MerkleTree::from_traces(&[trace]);
-println!("Merkle root: {:?}", tree.root());
-```
-
-## Capability Bitmask
-
-| Bit | Capability | Description |
-|-----|-----------|-------------|
-| 0 | `NO_STD` | Runs without std |
-| 1 | `ASYNC` | Async transport |
-| 2 | `CUDA` | GPU compute |
-| 3 | `PLATO` | PLATO sync |
-| 4 | `FFI` | Foreign function interface |
-| 5 | `PYTHON` | Python bindings |
-
-## Serialization
-
-All serialization uses **Postcard** (no_std serde, compact binary). No bincode, no JSON.
-
-## Configuration
-
-Environment variables with `GLUE_` prefix (requires `std` feature):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GLUE_TIER_ID` | `[0;8]` | Hex-encoded 8-byte tier ID |
-| `GLUE_PROTOCOL_VERSION` | `1` | Protocol version |
-| `GLUE_MAX_MESSAGE_SIZE` | `65536` | Max wire message size |
-| `GLUE_PLATO_SYNC_INTERVAL_MS` | `5000` | PLATO sync interval |
-| `GLUE_BEACON_INTERVAL_MS` | `1000` | Beacon broadcast interval |
-
-## Tests
-
-```bash
-cargo test                    # 22 tests (10 unit + 12 integration)
-cargo test --features std     # Includes LRU cache tests
-```
+---
 
 ## License
 
