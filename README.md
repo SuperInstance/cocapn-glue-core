@@ -1,5 +1,15 @@
 # cocapn-glue-core
 
+
+## Meta
+
+**Domain:** core-infrastructure
+**Depends on:** —
+**Depended by:** keeper
+**Implements:** keeper-fleet-protocol, binary-wire
+**Related:** keel, fleet-ecosystem
+
+
 **The nervous system. One wire protocol across every tier — Cortex-M0 microcontroller to CUDA GPU.**
 
 The Cocapn fleet spans a wide range of hardware: [Cortex-M0+](https://en.wikipedia.org/wiki/ARM_Cortex-M0) microcontrollers running bare metal, x86_64 servers, aarch64 edge devices, and CUDA GPUs. These tiers don't share an operating system, allocator, or even a common word size. What they share is this crate — a unified binary wire protocol that works on all of them.
