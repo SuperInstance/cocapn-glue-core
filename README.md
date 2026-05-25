@@ -69,6 +69,15 @@ The Cocapn fleet's nervous system:
 
 ---
 
+## Related
+
+- **[cocapn](https://github.com/SuperInstance/cocapn)** — Fleet-wide coordination
+- **[cocapn-plato](https://github.com/SuperInstance/cocapn-plato)** — PLATO integration (SDK + server + query engine)
+- **[plato-core](https://github.com/SuperInstance/plato-core)** — Foundation types and mesh registry
+- **[plato-engine](https://github.com/SuperInstance/plato-engine)** — Rust PLATO engine
+- **[beacon-protocol](https://github.com/SuperInstance/beacon-protocol)** — Fleet discovery and registry
+- **[bottle-protocol](https://github.com/SuperInstance/bottle-protocol)** — Git-native agent communication
+
 ## License
 
 MIT
