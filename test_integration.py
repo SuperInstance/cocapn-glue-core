@@ -58,6 +58,17 @@ def test_keeper_forwards_to_plato():
         time.sleep(0.2)
     
     time.sleep(0.5)
+
+    # The keeper only prints as it forwards tiles; nothing here previously
+    # asserted the protocol actually delivered them. Check the agent's own
+    # sequence counter (incremented once per sent message in send()) so this
+    # test fails if messages genuinely stop flowing.
+    stats = agent.get_stats()
+    assert stats.get("sequence", 0) >= len(test_tiles), (
+        f"Expected at least {len(test_tiles)} sent messages, got {stats}"
+    )
+    print(f"  [Agent] Stats after test: {stats}")
+
     agent.stop()
     keeper.stop()
     print("\nIntegration test complete.")
